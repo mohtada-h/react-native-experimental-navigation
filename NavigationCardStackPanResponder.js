@@ -13,13 +13,14 @@
 'use strict';
 
 const Animated = require('react-native').Animated;
+const Dimensions = require('react-native').Dimensions;
 const NavigationAbstractPanResponder = require('./NavigationAbstractPanResponder');
 
 const clamp = require('clamp');
 
 import type {
-  NavigationPanPanHandlers,
-  NavigationSceneRendererProps,
+    NavigationPanPanHandlers,
+    NavigationSceneRendererProps,
 } from 'NavigationTypeDefinition';
 
 /**
@@ -44,7 +45,7 @@ const RESPOND_THRESHOLD = 15;
  * For horizontal scroll views, a distance of 30 from the left of the screen is the
  * standard maximum position to start touch responsiveness.
  */
-const RESPOND_POSITION_MAX_HORIZONTAL = 30;
+const RESPOND_POSITION_MAX_HORIZONTAL = Dimensions.get('window').width;
 const RESPOND_POSITION_MAX_VERTICAL = null;
 
 /**
@@ -56,8 +57,8 @@ const DISTANCE_THRESHOLD = 100;
  * Primitive gesture directions.
  */
 const Directions = {
-  'HORIZONTAL': 'horizontal',
-  'VERTICAL': 'vertical',
+    'HORIZONTAL': 'horizontal',
+    'VERTICAL': 'vertical',
 };
 
 export type NavigationGestureDirection =  'horizontal' | 'vertical';
@@ -66,10 +67,10 @@ export type NavigationGestureDirection =  'horizontal' | 'vertical';
  * Primitive gesture actions.
  */
 const Actions = {
-  // The gesture to navigate backward.
-  // This is done by swiping from the left to the right or from the top to the
-  // bottom.
-  BACK: {type: 'back'},
+    // The gesture to navigate backward.
+    // This is done by swiping from the left to the right or from the top to the
+    // bottom.
+    BACK: {type: 'back'},
 };
 
 /**
@@ -88,154 +89,154 @@ const Actions = {
  */
 class NavigationCardStackPanResponder extends NavigationAbstractPanResponder {
 
-  _isResponding: boolean;
-  _isVertical: boolean;
-  _props: NavigationSceneRendererProps;
-  _startValue: number;
+    _isResponding: boolean;
+    _isVertical: boolean;
+    _props: NavigationSceneRendererProps;
+    _startValue: number;
 
-  constructor(
-    direction: NavigationGestureDirection,
-    props: NavigationSceneRendererProps,
-  ) {
-    super();
-    this._isResponding = false;
-    this._isVertical = direction === Directions.VERTICAL;
-    this._props = props;
-    this._startValue = 0;
-  }
-
-  onMoveShouldSetPanResponder(event: any, gesture: any): boolean {
-    const props = this._props;
-
-    if (props.navigationState.index !== props.scene.index) {
-      return false;
+    constructor(
+        direction: NavigationGestureDirection,
+        props: NavigationSceneRendererProps,
+    ) {
+        super();
+        this._isResponding = false;
+        this._isVertical = direction === Directions.VERTICAL;
+        this._props = props;
+        this._startValue = 0;
     }
 
-    const layout = props.layout;
-    const isVertical = this._isVertical;
-    const index = props.navigationState.index;
-    const currentDragDistance = gesture[isVertical ? 'dy' : 'dx'];
-    const currentDragPosition = gesture[isVertical ? 'moveY' : 'moveX'];
-    const maxDragDistance = isVertical ?
-      layout.height.__getValue() :
-      layout.width.__getValue();
+    onMoveShouldSetPanResponder(event: any, gesture: any): boolean {
+        const props = this._props;
 
-    const positionMax = isVertical ?
-      RESPOND_POSITION_MAX_VERTICAL :
-      RESPOND_POSITION_MAX_HORIZONTAL;
+        if (props.navigationState.index !== props.scene.index) {
+            return false;
+        }
 
-    if (positionMax != null && currentDragPosition > positionMax) {
-      return false;
+        const layout = props.layout;
+        const isVertical = this._isVertical;
+        const index = props.navigationState.index;
+        const currentDragDistance = gesture[isVertical ? 'dy' : 'dx'];
+        const currentDragPosition = gesture[isVertical ? 'moveY' : 'moveX'];
+        const maxDragDistance = isVertical ?
+            layout.height.__getValue() :
+            layout.width.__getValue();
+
+        const positionMax = isVertical ?
+            RESPOND_POSITION_MAX_VERTICAL :
+            RESPOND_POSITION_MAX_HORIZONTAL;
+
+        if (positionMax != null && currentDragPosition > positionMax) {
+            return false;
+        }
+
+        return (
+            Math.abs(currentDragDistance) > RESPOND_THRESHOLD &&
+            maxDragDistance > 0 &&
+            index > 0
+        );
     }
 
-    return (
-      Math.abs(currentDragDistance) > RESPOND_THRESHOLD &&
-      maxDragDistance > 0 &&
-      index > 0
-    );
-  }
-
-  onPanResponderGrant(): void {
-    this._isResponding = false;
-    this._props.position.stopAnimation((value: number) => {
-      this._isResponding = true;
-      this._startValue = value;
-    });
-  }
-
-  onPanResponderMove(event: any, gesture: any): void {
-    if (!this._isResponding) {
-      return;
+    onPanResponderGrant(): void {
+        this._isResponding = false;
+        this._props.position.stopAnimation((value: number) => {
+            this._isResponding = true;
+            this._startValue = value;
+        });
     }
 
-    const props = this._props;
-    const layout = props.layout;
-    const isVertical = this._isVertical;
-    const axis = isVertical ? 'dy' : 'dx';
-    const index = props.navigationState.index;
-    const distance = isVertical ?
-      layout.height.__getValue() :
-      layout.width.__getValue();
+    onPanResponderMove(event: any, gesture: any): void {
+        if (!this._isResponding) {
+            return;
+        }
 
-    const value = clamp(
-      index - 1,
-      this._startValue - (gesture[axis] / distance),
-      index
-    );
+        const props = this._props;
+        const layout = props.layout;
+        const isVertical = this._isVertical;
+        const axis = isVertical ? 'dy' : 'dx';
+        const index = props.navigationState.index;
+        const distance = isVertical ?
+            layout.height.__getValue() :
+            layout.width.__getValue();
 
-    props.position.setValue(value);
-  }
+        const value = clamp(
+            index - 1,
+            this._startValue - (gesture[axis] / distance),
+            index
+        );
 
-  onPanResponderRelease(event: any, gesture: any): void {
-    if (!this._isResponding) {
-      return;
+        props.position.setValue(value);
     }
 
-    this._isResponding = false;
+    onPanResponderRelease(event: any, gesture: any): void {
+        if (!this._isResponding) {
+            return;
+        }
 
-    const props = this._props;
-    const isVertical = this._isVertical;
-    const axis = isVertical ? 'dy' : 'dx';
-    const index = props.navigationState.index;
-    const distance = gesture[axis];
+        this._isResponding = false;
 
-    props.position.stopAnimation((value: number) => {
-      this._reset();
-       if (distance > DISTANCE_THRESHOLD  || value <= index - POSITION_THRESHOLD) {
-        props.onNavigate(Actions.BACK);
-      }
-    });
-  }
+        const props = this._props;
+        const isVertical = this._isVertical;
+        const axis = isVertical ? 'dy' : 'dx';
+        const index = props.navigationState.index;
+        const distance = gesture[axis];
 
-  onPanResponderTerminate(): void {
-    this._isResponding = false;
-    this._reset();
-  }
+        props.position.stopAnimation((value: number) => {
+            this._reset();
+            if (distance > DISTANCE_THRESHOLD  || value <= index - POSITION_THRESHOLD) {
+                props.onNavigate(Actions.BACK);
+            }
+        });
+    }
 
-  _reset(): void {
-    const props = this._props;
-    Animated.timing(
-      props.position,
-      {
-        toValue: props.navigationState.index,
-        duration: ANIMATION_DURATION,
-      }
-    ).start();
-  }
+    onPanResponderTerminate(): void {
+        this._isResponding = false;
+        this._reset();
+    }
+
+    _reset(): void {
+        const props = this._props;
+        Animated.timing(
+            props.position,
+            {
+                toValue: props.navigationState.index,
+                duration: ANIMATION_DURATION,
+            }
+        ).start();
+    }
 }
 
 function createPanHandlers(
-  direction: NavigationGestureDirection,
-  props: NavigationSceneRendererProps,
+    direction: NavigationGestureDirection,
+    props: NavigationSceneRendererProps,
 ): NavigationPanPanHandlers {
-  const responder = new NavigationCardStackPanResponder(direction, props);
-  return responder.panHandlers;
+    const responder = new NavigationCardStackPanResponder(direction, props);
+    return responder.panHandlers;
 }
 
 function forHorizontal(
-  props: NavigationSceneRendererProps,
+    props: NavigationSceneRendererProps,
 ): NavigationPanPanHandlers {
-  return createPanHandlers(Directions.HORIZONTAL, props);
+    return createPanHandlers(Directions.HORIZONTAL, props);
 }
 
 function forVertical(
-  props: NavigationSceneRendererProps,
+    props: NavigationSceneRendererProps,
 ): NavigationPanPanHandlers {
-  return createPanHandlers(Directions.VERTICAL, props);
+    return createPanHandlers(Directions.VERTICAL, props);
 }
 
 module.exports = {
-  // constants
-  ANIMATION_DURATION,
-  DISTANCE_THRESHOLD,
-  POSITION_THRESHOLD,
-  RESPOND_THRESHOLD,
+    // constants
+    ANIMATION_DURATION,
+    DISTANCE_THRESHOLD,
+    POSITION_THRESHOLD,
+    RESPOND_THRESHOLD,
 
-  // enums
-  Actions,
-  Directions,
+    // enums
+    Actions,
+    Directions,
 
-  // methods.
-  forHorizontal,
-  forVertical,
+    // methods.
+    forHorizontal,
+    forVertical,
 };
